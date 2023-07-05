@@ -1,0 +1,7 @@
+name: MinecraftTerrain
+version: 0.1
+author: lychee
+main: me.lychee.MinecraftTerrain.Main
+description: Redone terrain gen
+api-version: 1.19
+load: startup
