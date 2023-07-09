@@ -10,7 +10,7 @@ import javax.swing.JPanel;
 
 public class Test extends JPanel {
 	private static final long serialVersionUID = 1938396399503105639L;
-	static final int X = 1000, Y = 1000;
+	static final int X = 1024, Y = 1024;
 	public Test() {setSize(X, Y);}
 	
 	long seed = new Random().nextLong();
@@ -21,14 +21,21 @@ public class Test extends JPanel {
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		if (!rendered) {
-			for (int x = 0; x < X; x++)
-				for (int y = 0; y < Y; y++) {
-					double n = Noise.getContinentalness(seed, x, y)+128;
-					//System.out.println(n);
-					Color c = new Color((int) n, (int) n, (int) n);
+			for (int x = 0; x < X / 16; x++)
+				for (int y = 0; y < Y / 16; y++) {
+					double[][] d = Noise.getHumidity(seed, x, y);
+					
+					for (int n1 = 0; n1< 16; n1++)
+						for (int n2 = 0; n2< 16; n2++) {
+							int a = (int) ((d[n1][n2]))*75+75;
+							//System.out.println(a);
+							i.setRGB(x*16+n1, y*16+n2, 
+									new Color(a, a, a).getRGB()
+								);
+						}
 					//System.out.println(c.toString());
 					
-					i.setRGB(x, y, c.getRGB());
+					
 				}
 			//System.out.println("AA"+new Color(i.getRGB(500, 500)).toString());
 			rendered = true;

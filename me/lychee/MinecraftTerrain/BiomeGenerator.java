@@ -9,6 +9,8 @@ import org.bukkit.generator.WorldInfo;
 
 public class BiomeGenerator extends BiomeProvider {
 	//TODO this
+	
+	//Consider implementing uncertainty in the threshold for biome changes, to avoid tiny biomes. Maybe consider blending the features without uncertainty somehow though
 	@Override
 	public Biome getBiome(WorldInfo worldInfo, int x, int y, int z) {
 		// TODO Auto-generated method stub
