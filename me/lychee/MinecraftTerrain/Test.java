@@ -21,23 +21,31 @@ public class Test extends JPanel {
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		if (!rendered) {
+			/*
 			for (int x = 0; x < X / 16; x++)
 				for (int y = 0; y < Y / 16; y++) {
-					double[][] d = Noise.getHumidity(seed, x, y);
+					double[][] d = Noise.getPeaksandValleysV2(seed, Noise.getContinentalness(seed, x, y),x, y);
 					
 					for (int n1 = 0; n1< 16; n1++)
 						for (int n2 = 0; n2< 16; n2++) {
-							int a = (int) ((d[n1][n2]))*75+75;
+							int a = (int) (d[n1][n2]* 255d / 75d);
 							//System.out.println(a);
 							i.setRGB(x*16+n1, y*16+n2, 
 									new Color(a, a, a).getRGB()
 								);
 						}
-					//System.out.println(c.toString());
-					
-					
 				}
-			//System.out.println("AA"+new Color(i.getRGB(500, 500)).toString());
+				*/
+			double[][] d = WaveletOctaveGenerator.noise(seed, 8, 0, 0, X, 1/2d);
+			for (int x = 0; x < X; x++)
+				for (int y = 0; y < Y; y++) {
+					
+					int A = (int) (d[x][y]*255);
+					i.setRGB(x, y,
+							new Color(A, A, A).getRGB());
+				}
+			
+			
 			rendered = true;
 			
 			System.out.println("Done!");

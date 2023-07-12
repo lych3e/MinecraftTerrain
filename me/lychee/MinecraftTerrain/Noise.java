@@ -9,12 +9,12 @@ public interface Noise {
 	//TODO make a function for finding how far away from water something is. This differs from continentalness due to rivers. This is useful because water caves are less likely to be above sea level, the closer you are to sea level water, such as (kinda) rivers & the sea
 	//Aquifers frfr. Deep air-filled caves are impossible IRL, except for pressurised chambers. Some concessions should be made here for gameplay purposes.
 	
-	// how far inland a given chunk is
+	// how far inland a given block is
 	// also generates 1 block outside each chunk as hydraulic erosion needs that to be seamless
 	// but doesn't have to start at -1 as long as I'm consistent
 	public static double[][] getContinentalness(long seed, int chunkX, int chunkY) {
 		SimplexOctaveGenerator g = new SimplexOctaveGenerator(seed+1, 10);
-		g.setScale(0.002D);
+		g.setScale(0.001D);
 		
 		double[][] out = new double[18][18];
 		
@@ -36,9 +36,46 @@ public interface Noise {
 		for (int x = 0; x < 18; x++)
 			for (int y = 0; y < 18; y++) {
 				
-				out[x][y] = continentalness[x][y]*sigmoid(g.noise(16*chunkX+x, 16*chunkY+y, 3d, 1/13d, true)*10)*3+64d;
+				out[x][y] = continentalness[x][y]*sigmoid(g.noise(16*chunkX+x, 16*chunkY+y, 3d, 1/13d, true)*10)*3+74d;
 			}
 		return out;
+	}
+	
+	public static boolean[][][] getCaves(long seed, int minHeight, int maxHeight, int[][] h, int chunkX, int chunkY) {
+		SimplexOctaveGenerator b = new SimplexOctaveGenerator(seed+3, 8);
+		b.setScale(0.003D); // generator for billowy (spaghetti) caves
+		b.setYScale(0.007D);
+		
+		SimplexOctaveGenerator r = new SimplexOctaveGenerator(seed+4, 8);
+		r.setScale(0.006D); // generator for rigid (swiss cheese) caves
+		
+		boolean[][][] out = new boolean[16][maxHeight-minHeight][16];
+		//TODO bias caves depending on height, eg less spaghetti in blackstone & less swiss cheese above blackstone
+		for (int x = 0; x < 16; x++)
+			for (int z = 0; z < 16; z++)
+				for (int y = 0; y < h[x][z]; y++) {
+					double billowy = Math.abs(b.noise(16*chunkX+x, y, 16*chunkY+z, 3d, 1/29d, true)); // Billowy noise for ravine-ey caves
+					double rigid = 1 - Math.abs(r.noise(16*chunkX+x, y, 16*chunkY+z, 12d, 1/17d, true)); // Rigid noise for swiss cheese caves
+					
+					
+					// cave if either noise is below an arbitrary bias (i.e. if density of stone is low enough)
+					out[x][y][z] = (rigid < getRigidBias(y)) | (billowy < getBillowyBias(y));
+				}
+		
+		return out;
+	}
+	
+	private static double getBillowyBias(int height) { // A good way to visualise these bias functions is to plot it in desmos, think of the Y axis as probability of a cave occuring, and the X axis as the height above bedrock
+		if (height == 0) return 2;
+		return 0.028*Math.log(height / 4d); // spaghetti caves get less frequent as you get further down
+	}
+	
+	private static double getRigidBias(int height) {
+		if (height == 0) return 2;
+		return Math.min(
+				-(0.5*Math.log(height / 96d) + 4d / height), // Swiss cheese caves get more frequent as you get further down
+				-0.04 * (height - 64) // more gradual decrease from cave roof
+				); 
 	}
 	
 	
@@ -57,11 +94,28 @@ public interface Noise {
 		return out;
 	}
 	
-	public static Material underwaterGenerator(SimplexOctaveGenerator g, int x, int y) {
-		double i = ((g.noise(x, y, 5, 1/2, true)+1)/2); //TODO wavelet noise might be better here
-		if (i > 2d/3d) return Material.CLAY;
-		else if (i > 1d/3d) return Material.GRAVEL;
-		else return Material.SAND;
+	public static Material[][] underwaterGenerator(long seed, int x, int y, double[][] h, int sea_level) {
+		//double[][] i = WaveletOctaveGenerator.noise(seed, 32, x, y, 96, 1/2d); //TODO query bias for vertical change 
+		Material[][] mat = new Material[16][16];
+		SimplexOctaveGenerator g = new SimplexOctaveGenerator(seed+4, 8);
+		g.setScale(0.05D);
+		
+		for (int X = 0; X < 16; X++)
+			for (int Y = 0; Y < 16; Y++) {
+				double d = (g.noise(x+X, y+Y, 2, 1/2, true) + 1) / 2;
+				if (h[X+1][Y+1] < sea_level) // this stops divide by zero. If this check fails, it's overground anyway
+						d *= underwaterBias((int) Math.round(sea_level - h[X+1][Y+1]));
+				
+				if (d > 2d/3d) mat[X][Y] = Material.SAND;
+				else if (d > 1d/3d) mat[X][Y] = Material.GRAVEL;
+				else mat[X][Y] = Material.CLAY;
+			}
+		
+		return mat;
+	}
+	
+	private static double underwaterBias(int height) {
+		return 2d / height + 0.5d;
 	}
 	
 	// Attempt at hydraulic erosion. Doesn't work properly, don't use
